@@ -1,0 +1,108 @@
+design a database for the Zen class programme:
+
+1. Users
+{
+  "_id": ObjectId("..."),
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "enrollment_date": "2020-10-01",
+  "codekata_score": 120,
+  "company_drive_participation": [ObjectId("company_drive_id1"), ObjectId("company_drive_id2")],
+  "attendance": [ObjectId("attendance_id1"), ObjectId("attendance_id2")],
+  "tasks_submitted": [ObjectId("task_id1"), ObjectId("task_id2")],
+  "mentor_id": ObjectId("mentor_id1")
+}
+
+2. Codekata
+{
+  "_id": ObjectId("..."),
+  "user_id": ObjectId("user_id1"),
+  "problems_solved": 25,
+  "date": "2020-10-10"
+}
+
+3. Attendance
+{
+  "_id": ObjectId("..."),
+  "user_id": ObjectId("user_id1"),
+  "date": "2020-10-10",
+  "status": "Absent" // or "Present"
+}
+
+4. Topics
+{
+  "_id": ObjectId("..."),
+  "topic_name": "MongoDB Basics",
+  "date": "2020-10-05"
+}
+
+5. Tasks
+{
+  "_id": ObjectId("..."),
+  "task_name": "MongoDB Assignment 1",
+  "topic_id": ObjectId("topic_id1"),
+  "due_date": "2020-10-10",
+  "status": "Submitted" // or "Not Submitted"
+}
+
+6. Company Drives
+{
+  "_id": ObjectId("..."),
+  "company_name": "TechCorp",
+  "drive_date": "2020-10-20",
+  "participants": [ObjectId("user_id1"), ObjectId("user_id2")],
+  "result": "Selected" // or "Not Selected"
+}
+
+7. Mentors
+{
+  "_id": ObjectId("..."),
+  "mentor_name": "Alice Smith",
+  "mentee_count": 20,
+  "mentees": [ObjectId("user_id1"), ObjectId("user_id2")]
+}
+
+Queries for the requirements:
+
+Find all the topics and tasks taught in the month of October:
+db.topics.find({ "date": { $gte: "2020-10-01", $lte: "2020-10-31" } })
+db.tasks.find({ "due_date": { $gte: "2020-10-01", $lte: "2020-10-31" } })
+
+Find all the company drives that occurred between 15th October 2020 and 31st October 2020:
+db.company_drives.find({ "drive_date": { $gte: "2020-10-15", $lte: "2020-10-31" } })
+
+Find all the company drives and students who appeared for the placement:
+db.company_drives.aggregate([
+  {
+    $lookup: {
+      from: "users",
+      localField: "participants",
+      foreignField: "_id",
+      as: "participants_details"
+    }
+  }
+])
+
+Find the number of problems solved by a user in Codekata:
+db.codekata.aggregate([
+  { $match: { "user_id": ObjectId("user_id1") } },
+  { $group: { _id: "$user_id", total_problems_solved: { $sum: "$problems_solved" } } }
+])
+
+Find all mentors with mentee counts greater than 15:
+db.mentors.find({ "mentee_count": { $gt: 15 } })
+
+Find the number of users who were absent and did not submit the task between 15th October 2020 and 31st October 2020:
+db.attendance.aggregate([
+  { $match: { "date": { $gte: "2020-10-15", $lte: "2020-10-31" }, "status": "Absent" } },
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "user_id",
+      foreignField: "user_id",
+      as: "tasks"
+    }
+  },
+  { $match: { "tasks.status": "Not Submitted" } },
+  { $group: { _id: "$user_id", count: { $sum: 1 } } }
+])
